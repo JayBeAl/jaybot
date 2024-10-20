@@ -25,4 +25,8 @@
     <PackageReference Include="ScreepsDotNet.API" Version="2.1.0" />
     <PackageReference Include="ScreepsDotNet.Bundler" Version="2.1.0" />
   </ItemGroup>
+
+  <ItemGroup>
+    <None Remove=".gitignore" />
+  </ItemGroup>
 </Project>
