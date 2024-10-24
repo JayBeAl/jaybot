@@ -13,6 +13,7 @@ public class RoomManager
     private readonly IRoom _room;
     private readonly IGame _game;
     private readonly SpawnManager _spawnManager;
+    private readonly BuildManager _buildManager;
 
     private readonly Dictionary<string, IRole> _roleMap = [];
 
@@ -33,7 +34,8 @@ public class RoomManager
         _game = game;
         _room = room;
         _spawnManager = spawnManager;
-        
+        _buildManager = new BuildManager(room);
+
         _roleMap.Add("harvester", new Harvester(_room));
         _roleMap.Add("upgrader", new Upgrader(_room));
         _roleMap.Add("builder", new Builder(_room));
@@ -69,6 +71,8 @@ public class RoomManager
         {
             TickCreep(creep);
         }
+        
+        _buildManager.Tick();
     }
 
     private void TickSpawn(IStructureSpawn spawn)
