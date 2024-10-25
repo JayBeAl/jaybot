@@ -8,7 +8,7 @@ namespace Screeps.Manager;
 
 public class BuildManager
 {
-    private const int BuildIntervalInSeconds = 60;
+    private const int BuildIntervalInSeconds = 15;
     private int _buildTickCounter = 0;
     
     private readonly IRoom _room;
@@ -54,6 +54,7 @@ public class BuildManager
             foreach (var source in _sources)
             {
                 var sourcePath = _room.FindPath(spawn.RoomPosition, source.RoomPosition, new FindPathOptions(true));
+                Console.WriteLine($"Found path from {spawn.RoomPosition} to {source.RoomPosition} -> {sourcePath.Count()}");
                 foreach (var pathStep in sourcePath)
                 {
                     _roads.Add(pathStep.Position);
@@ -61,11 +62,13 @@ public class BuildManager
             }
             
             var controllerPath = _room.FindPath(spawn.RoomPosition, _room.Controller!.RoomPosition, new FindPathOptions(true));
+            Console.WriteLine($"Found path from {spawn.RoomPosition} to {_room.Controller!.RoomPosition} -> {controllerPath.Count()}");
             foreach (var pathStep in controllerPath)
             {
                 _roads.Add(pathStep.Position);
             }
         }
+        Console.WriteLine($"Found {_roads.Count} roads in {_room.Name}");
     }
 
     private void ManageRoads()
@@ -83,6 +86,7 @@ public class BuildManager
             return;
         }
 
+        Console.WriteLine($"Managing roads in {_room.Name} -> {_roads.Count} roads");
         foreach (var roadPosition in _roads)
         {
             var lookResult = _room.LookAt(roadPosition).ToList();
@@ -95,7 +99,7 @@ public class BuildManager
             }
         
             // Create road construction site if only a creep is present
-            if (lookResult.Count == 1 && lookResult[0] is ICreep)
+            if (lookResult.Count == 0 || lookResult.Count == 1 && lookResult[0] is ICreep)
             {
                 _room.CreateConstructionSite<IStructureRoad>(roadPosition);
                 Console.WriteLine($"Building road at {roadPosition}");
