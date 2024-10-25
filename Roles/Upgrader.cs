@@ -6,22 +6,27 @@ namespace Screeps.Roles;
 
 public class Upgrader(IRoom room) : RoleBase(room)
 {
-    private bool _isUpgrading;
     public override void Run(ICreep creep)
     {
-        if (_isUpgrading && creep.Store.GetUsedCapacity() == 0)
+        if (!creep.Memory.TryGetBool("isUpgrading", out var isUpgrading))
         {
-            _isUpgrading = false;
+            creep.Memory.SetValue("isUpgrading", false);
+            creep.Memory.TryGetBool("isUpgrading", out isUpgrading);
+        }
+        
+        if (isUpgrading && creep.Store.GetUsedCapacity() == 0)
+        {
+            isUpgrading = false;
             creep.Say("Get \u26a1");
         }
         
-        if (!_isUpgrading && creep.Store.GetFreeCapacity() == 0)
+        if (!isUpgrading && creep.Store.GetFreeCapacity() == 0)
         {
-            _isUpgrading = true;
+            isUpgrading = true;
             creep.Say("Upgrade \ud83d\udea7");
         }
         
-        if (!_isUpgrading && creep.Store.GetFreeCapacity() > 0)
+        if (!isUpgrading && creep.Store.GetFreeCapacity() > 0)
         {
             var energyStorage = FindNearestFilledEnergyStorage(creep.LocalPosition);
             if (energyStorage == null)
@@ -34,7 +39,7 @@ public class Upgrader(IRoom room) : RoleBase(room)
                 creep.MoveTo(energyStorage.LocalPosition);
             }
         }
-        else if (_isUpgrading && creep.Store.GetUsedCapacity() > 0)
+        else if (isUpgrading && creep.Store.GetUsedCapacity() > 0)
         {
             if(creep.UpgradeController(creep.Room!.Controller!) == CreepUpgradeControllerResult.NotInRange)
             {
@@ -46,6 +51,8 @@ public class Upgrader(IRoom room) : RoleBase(room)
             // Go idle
             creep.Say("Idle \ud83d\udd04");
         }
+        
+        creep.Memory.SetValue("isUpgrading", isUpgrading);
     }
 
     private IStructure? FindNearestFilledEnergyStorage(Position position)

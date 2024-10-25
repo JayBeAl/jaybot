@@ -6,18 +6,23 @@ namespace Screeps.Roles;
 
 public class Harvester(IRoom room) : RoleBase(room)
 {
-    private bool _isMining;
     public override void Run(ICreep creep)
     {
-        if (_isMining && creep.Store.GetFreeCapacity() == 0)
+        if (!creep.Memory.TryGetBool("isMining", out var isMining))
         {
-            _isMining = false;
+            creep.Memory.SetValue("isMining", false);
+            creep.Memory.TryGetBool("isMining", out isMining);
+        }
+        
+        if (isMining && creep.Store.GetFreeCapacity() == 0)
+        {
+            isMining = false;
             creep.Say("Delivering \ud83d\udea7");
         }
         
-        if (!_isMining && creep.Store.GetUsedCapacity() == 0)
+        if (!isMining && creep.Store.GetUsedCapacity() == 0)
         {
-            _isMining = true;
+            isMining = true;
             creep.Say("Mining \u26a1");
         }
         
@@ -48,6 +53,8 @@ public class Harvester(IRoom room) : RoleBase(room)
                 creep.MoveTo(storage.RoomPosition);
             }
         }
+        
+        creep.Memory.SetValue("isMining", isMining);
     }
 
     private ISource? FindNearestSource(Position position)

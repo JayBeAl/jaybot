@@ -6,23 +6,27 @@ namespace Screeps.Roles;
 
 public class Builder(IRoom room) : RoleBase(room)
 {
-    private bool _isBuilding;
-    
     public override void Run(ICreep creep)
     {
-        if (_isBuilding && creep.Store.GetUsedCapacity() == 0)
+        if (!creep.Memory.TryGetBool("isBuilding", out var isBuilding))
         {
-            _isBuilding = false;
+            creep.Memory.SetValue("isBuilding", false);
+            creep.Memory.TryGetBool("isBuilding", out isBuilding);
+        }
+        
+        if (isBuilding && creep.Store.GetUsedCapacity() == 0)
+        {
+            isBuilding = false;
             creep.Say("Get \u26a1");
         }
 
-        if (!_isBuilding && creep.Store.GetFreeCapacity() == 0)
+        if (!isBuilding && creep.Store.GetFreeCapacity() == 0)
         {
-            _isBuilding = true;
+            isBuilding = true;
             creep.Say("Build \ud83d\udea7");
         }
         
-        if (!_isBuilding && creep.Store.GetFreeCapacity() > 0)
+        if (!isBuilding && creep.Store.GetFreeCapacity() > 0)
         {
             var energyStorage = FindNearestFilledEnergyStorage(creep.LocalPosition);
             if (energyStorage == null)
@@ -35,7 +39,7 @@ public class Builder(IRoom room) : RoleBase(room)
                 creep.MoveTo(energyStorage.LocalPosition);
             }
         }
-        else if(_isBuilding && creep.Room!.Find<IConstructionSite>().Any())
+        else if(isBuilding && creep.Room!.Find<IConstructionSite>().Any())
         {
             var constructionSite = creep.Room!.Find<IConstructionSite>().First();
             if (creep.Build(constructionSite) == CreepBuildResult.NotInRange)
@@ -48,6 +52,8 @@ public class Builder(IRoom room) : RoleBase(room)
             // Go idle
             creep.Say("Idle \ud83d\udd04");
         }
+        
+        creep.Memory.SetValue("isBuilding", isBuilding);
     }
     
     private IStructure? FindNearestFilledEnergyStorage(Position position)
