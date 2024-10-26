@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Text.Json.Nodes;
 using Screeps.Roles;
 using ScreepsDotNet.API.World;
 
@@ -36,7 +35,7 @@ public class RoomManager
         _game = game;
         _room = room;
         _spawnManager = spawnManager;
-        _buildManager = new BuildManager(room);
+        _buildManager = new BuildManager(game, room);
 
         _roleMap.Add("harvester", new Harvester(_room));
         _roleMap.Add("upgrader", new Upgrader(_room));

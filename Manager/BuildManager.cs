@@ -8,16 +8,18 @@ namespace Screeps.Manager;
 
 public class BuildManager
 {
-    private const int BuildIntervalInSeconds = 15;
-    private int _buildTickCounter = 0;
+    private const int BuildIntervalInTicks = 15;
+    private const int RouteCheckIntervalInTicks = 1800;
     
     private readonly IRoom _room;
+    private readonly IGame _game;
     private List<IStructureSpawn> _spawns = [];
     private readonly List<ISource> _sources;
     private readonly List<Position> _roads = [];
     
-    public BuildManager(IRoom room)
+    public BuildManager(IGame game, IRoom room)
     {
+        _game = game;
         _room = room;
         _sources = _room.Find<ISource>().ToList();
         UpdateSpawns();
@@ -26,16 +28,17 @@ public class BuildManager
 
     public void Tick()
     {
-        _buildTickCounter++;
-        
-        if (_buildTickCounter < BuildIntervalInSeconds)
+        if (_game.Time % BuildIntervalInTicks == 0)
         {
-            return;
+            Console.WriteLine($"Checking for roads in {_room.Name}");
+            ManageRoads();
         }
         
-        _buildTickCounter = 0;
-        Console.WriteLine($"Checking for roads in {_room.Name}");
-        ManageRoads();
+        if (_game.Time % RouteCheckIntervalInTicks == 0)
+        {
+            Console.WriteLine($"Regenerating routes in {_room.Name}");
+            GenerateRoomRoutes();
+        }
     }
 
     private void UpdateSpawns()
@@ -49,6 +52,8 @@ public class BuildManager
 
     private void GenerateRoomRoutes()
     {
+        _roads.Clear();
+        
         foreach (var spawn in _spawns)
         {
             foreach (var source in _sources)
