@@ -20,11 +20,13 @@ public class RoomManager
     private const int HarvesterTarget= 5;
     private const int UpgraderTarget= 3;
     private const int BuilderTarget= 2;
+    private const int MaintainerTarget= 1;
     
     private List<ICreep> _allCreeps = [];
     private List<ICreep> _harvesters = [];
     private List<ICreep> _upgraders = [];
     private List<ICreep> _builders = [];
+    private List<ICreep> _maintainers = [];
     
     private List<IStructureSpawn> _roomSpawns = [];
     
@@ -39,6 +41,7 @@ public class RoomManager
         _roleMap.Add("harvester", new Harvester(_room));
         _roleMap.Add("upgrader", new Upgrader(_room));
         _roleMap.Add("builder", new Builder(_room));
+        _roleMap.Add("maintainer", new Maintainer(_room));
         
         // Get all spawns in this room since Room.finds are expensive
         _roomSpawns = _room.Find<IStructureSpawn>().ToList();
@@ -94,6 +97,10 @@ public class RoomManager
         {
             _spawnManager.TrySpawnCreep(spawn, "builder");
         }
+        else if (_maintainers.Count < MaintainerTarget)
+        {
+            _spawnManager.TrySpawnCreep(spawn, "maintainer");
+        }
     }
 
     private void OnSpawn(ICreep creep)
@@ -113,6 +120,10 @@ public class RoomManager
                     break;
                 case Builder:
                     _builders.Add(creep);
+                    Console.WriteLine($"Added {role}");
+                    break;
+                case Maintainer:
+                    _maintainers.Add(creep);
                     Console.WriteLine($"Added {role}");
                     break;
                 default:
@@ -139,6 +150,10 @@ public class RoomManager
                     break;
                 case Builder:
                     _builders.Remove(creep);
+                    Console.WriteLine($"Removed {role}");
+                    break;
+                case Maintainer:
+                    _maintainers.Remove(creep);
                     Console.WriteLine($"Removed {role}");
                     break;
                 default:
