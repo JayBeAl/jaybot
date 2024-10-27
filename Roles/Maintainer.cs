@@ -1,45 +1,50 @@
-using System;
 using System.Linq;
-using ScreepsDotNet.API;
+using Screeps.Roles.Components;
 using ScreepsDotNet.API.World;
 
 namespace Screeps.Roles;
 
-public class Maintainer(IRoom room) : RoleBase(room)
+public class Maintainer : RoleBase
 {
     private const float RepairThreshold = 0.3f;
     private const float RepairFinishedThreshold = 0.95f;
+    private const string IdleFlagName = "Idle";
+    
+    private readonly EnergyReceivingComponent _energyReceivingComponent;
+    private readonly IdleComponent _idleComponent;
+
+    public Maintainer(IRoom room) : base(room)
+    {
+        _energyReceivingComponent = new EnergyReceivingComponent(_room);
+        _idleComponent = new IdleComponent(_room);
+    }
     
     public override void Run(ICreep creep)
+    {
+        if (!_energyReceivingComponent.Tick(creep))
+        {
+            return;
+        }
+
+        if (ExecuteMaintainerBehavior(creep))
+        {
+            return;
+        }
+        
+        _idleComponent.Tick(creep, IdleFlagName);
+    }
+
+    private bool ExecuteMaintainerBehavior(ICreep creep)
     {
         if (!creep.Memory.TryGetBool("isMaintaining", out var isMaintaining))
         {
             creep.Memory.SetValue("isMaintaining", false);
             creep.Memory.TryGetBool("isMaintaining", out isMaintaining);
         }
-        
-        if (!creep.Memory.TryGetBool("hasFullEnergy", out var hasFullEnergy))
-        {
-            creep.Memory.SetValue("hasFullEnergy", false);
-            creep.Memory.TryGetBool("hasFullEnergy", out hasFullEnergy);
-        }
-        
-        if (hasFullEnergy && creep.Store.GetUsedCapacity() == 0)
-        {
-            hasFullEnergy = false;
-            creep.Say("Get \u26a1");
-        }
-
-        if (!hasFullEnergy && creep.Store.GetFreeCapacity() == 0)
-        {
-            hasFullEnergy = true;
-            creep.Say("Repair \ud83d\udea7");
-        }
 
         if (!isMaintaining)
         {
             var building = FindBuildingToMaintain(creep);
-            Console.WriteLine("Building found: " + building);
             if (building != null)
             {
                 creep.SetUserData(building);
@@ -56,24 +61,9 @@ public class Maintainer(IRoom room) : RoleBase(room)
                 {
                     isMaintaining = false;
                 }
-
-                if (!hasFullEnergy)
+                else if(creep.Repair(building) == CreepRepairResult.NotInRange)
                 {
-                    var energyStorage = FindNearestFilledEnergyStorage(creep.LocalPosition);
-                    if (energyStorage != null)
-                    {
-                        if (creep.Withdraw(energyStorage, ResourceType.Energy) == CreepWithdrawResult.NotInRange)
-                        {
-                            creep.MoveTo(energyStorage.LocalPosition);
-                        }
-                    }
-                }
-                else
-                {
-                    if (creep.Repair(building) == CreepRepairResult.NotInRange)
-                    {
-                        creep.MoveTo(building.LocalPosition);
-                    }
+                    creep.MoveTo(building.LocalPosition);
                 }
             }
             else
@@ -81,13 +71,9 @@ public class Maintainer(IRoom room) : RoleBase(room)
                 isMaintaining = false;
             }
         }
-        else
-        {
-            creep.Say("Idle \ud83d\udd04");
-        }
         
         creep.Memory.SetValue("isMaintaining", isMaintaining);
-        creep.Memory.SetValue("hasFullEnergy", hasFullEnergy);
+        return isMaintaining;
     }
 
     private IStructure? FindBuildingToMaintain(ICreep creep)
@@ -101,7 +87,7 @@ public class Maintainer(IRoom room) : RoleBase(room)
             return buildingToMaintain.First();
         }
         
-         buildingToMaintain = _room.Find<IStructureRoad>()
+        buildingToMaintain = _room.Find<IStructureRoad>()
              .Where(building => (float)building.Hits / building.HitsMax < RepairThreshold)
              .OrderBy(building => creep.LocalPosition.LinearDistanceTo(building.LocalPosition));
 
@@ -120,13 +106,5 @@ public class Maintainer(IRoom room) : RoleBase(room)
          }
 
          return null;
-    }
-
-    private IStructure? FindNearestFilledEnergyStorage(Position position)
-    {
-        return _room.Find<IStructure>()
-            .Where(x => x.Exists && (x is IStructureSpawn && ((IStructureSpawn)x).Store[ResourceType.Energy] > 0 
-                                     || x is IStructureExtension && ((IStructureExtension)x).Store[ResourceType.Energy] > 0))
-            .MinBy(x => x.LocalPosition.LinearDistanceTo(position));
     }
 }

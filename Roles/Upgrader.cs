@@ -1,65 +1,49 @@
-using System.Linq;
-using ScreepsDotNet.API;
+using Screeps.Roles.Components;
 using ScreepsDotNet.API.World;
 
 namespace Screeps.Roles;
 
-public class Upgrader(IRoom room) : RoleBase(room)
+public class Upgrader : RoleBase
 {
+    private const int ControllerMaxLevel = 8;
+    private const string IdleFlagName = "Idle";
+    
+    private readonly EnergyReceivingComponent _energyReceivingComponent;
+    private readonly IdleComponent _idleComponent;
+
+    public Upgrader(IRoom room) : base(room)
+    {
+        _energyReceivingComponent = new EnergyReceivingComponent(_room);
+        _idleComponent = new IdleComponent(_room);
+    }
+    
     public override void Run(ICreep creep)
     {
-        if (!creep.Memory.TryGetBool("isUpgrading", out var isUpgrading))
+        if (!_energyReceivingComponent.Tick(creep))
         {
-            creep.Memory.SetValue("isUpgrading", false);
-            creep.Memory.TryGetBool("isUpgrading", out isUpgrading);
+            return;
         }
-        
-        if (isUpgrading && creep.Store.GetUsedCapacity() == 0)
+
+        if (ExecuteUpgraderBehavior(creep))
         {
-            isUpgrading = false;
-            creep.Say("Get \u26a1");
+            return;
         }
-        
-        if (!isUpgrading && creep.Store.GetFreeCapacity() == 0)
+
+        _idleComponent.Tick(creep, IdleFlagName);
+    }
+
+    private bool ExecuteUpgraderBehavior(ICreep creep)
+    {
+        if (creep.Room!.Controller!.Level != ControllerMaxLevel)
         {
-            isUpgrading = true;
-            creep.Say("Upgrade \ud83d\udea7");
-        }
-        
-        if (!isUpgrading && creep.Store.GetFreeCapacity() > 0)
-        {
-            var energyStorage = FindNearestFilledEnergyStorage(creep.LocalPosition);
-            if (energyStorage == null)
-            {
-                return;
-            }
-            
-            if (creep.Withdraw(energyStorage, ResourceType.Energy) == CreepWithdrawResult.NotInRange)
-            {
-                creep.MoveTo(energyStorage.LocalPosition);
-            }
-        }
-        else if (isUpgrading && creep.Store.GetUsedCapacity() > 0)
-        {
-            if(creep.UpgradeController(creep.Room!.Controller!) == CreepUpgradeControllerResult.NotInRange)
+            if (creep.UpgradeController(creep.Room!.Controller!) == CreepUpgradeControllerResult.NotInRange)
             {
                 creep.MoveTo(creep.Room!.Controller!.LocalPosition);
             }
-        }
-        else
-        {
-            // Go idle
-            creep.Say("Idle \ud83d\udd04");
-        }
-        
-        creep.Memory.SetValue("isUpgrading", isUpgrading);
-    }
 
-    private IStructure? FindNearestFilledEnergyStorage(Position position)
-    {
-        return _room.Find<IStructure>()
-            .Where(x => x.Exists && (x is IStructureSpawn && ((IStructureSpawn)x).Store[ResourceType.Energy] > 0 
-                                     || x is IStructureExtension && ((IStructureExtension)x).Store[ResourceType.Energy] > 0))
-            .MinBy(x => x.LocalPosition.LinearDistanceTo(position));
+            return true;
+        }
+
+        return false;
     }
 }

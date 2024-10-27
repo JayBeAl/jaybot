@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.VisualBasic;
 using Screeps.Manager;
 using ScreepsDotNet.API.Bot;
 using ScreepsDotNet.API.World;
@@ -24,7 +23,6 @@ public class JayBot : IBot
     
     public void Loop()
     {
-        Console.WriteLine("Hello, im existing");
         // Check for any rooms that are no longer visible and remove their manager
         var trackedRooms = _roomManagers.Keys.ToArray();
         foreach (var room in trackedRooms)
