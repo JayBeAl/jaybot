@@ -10,13 +10,11 @@ namespace Screeps;
 public class JayBot : IBot
 {
     private readonly IGame _game;
-    private readonly SpawnManager _spawnManager;
     private readonly Dictionary<IRoom, RoomManager> _roomManagers = [];
     
     public JayBot(IGame game)
     {
         _game = game;
-        _spawnManager = new SpawnManager(_game);
 
         CleanMemory();
     }
@@ -39,7 +37,7 @@ public class JayBot : IBot
             if (!_roomManagers.TryGetValue(room, out var roomManager))
             {
                 Console.WriteLine($"Adding room manager for {room} as it is now visible and controlled by us");
-                roomManager = new RoomManager(_game, room, _spawnManager);
+                roomManager = new RoomManager(_game, room);
                 _roomManagers.Add(room, roomManager);
             }
             roomManager.Tick();
