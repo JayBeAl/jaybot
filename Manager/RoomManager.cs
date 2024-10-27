@@ -23,5 +23,10 @@ public class RoomManager
     {
         _spawnManager.Tick();
         _buildManager.Tick();
+
+        if (_room.Find<ICreep>().Any(creep => !creep.My) && _room.Controller!.SafeModeAvailable > 0 && _room.Controller!.SafeMode == null)
+        {
+            _room.Controller.ActivateSafeMode();
+        }
     }
 }

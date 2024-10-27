@@ -52,14 +52,14 @@ public class SpawnManager
     public void Tick()
     {
         // Check for dead creeps and remove them
-        foreach (var creep in _allCreeps.Where(creep => !creep.Exists).ToImmutableArray())
+        foreach (var creep in _allCreeps.Where(creep => !creep.Exists && creep.My).ToImmutableArray())
         {
             Console.WriteLine($"Removing dead creep {creep}");
             OnDead(creep);
         }
         
         // Find new creeps
-        var newCreepsList = _room.Find<ICreep>().Where(creep => !_allCreeps.Contains(creep));
+        var newCreepsList = _room.Find<ICreep>().Where(creep => !_allCreeps.Contains(creep) && creep.My);
         foreach (var creep in newCreepsList)
         {
             OnSpawn(creep);
