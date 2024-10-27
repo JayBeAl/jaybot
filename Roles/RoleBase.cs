@@ -4,7 +4,7 @@ namespace Screeps.Roles;
 
 public abstract class RoleBase(IRoom room) : IRole
 {
-    protected readonly IRoom _room = room;
+    protected readonly IRoom Room = room;
 
     public abstract void Run(ICreep creep);
 }

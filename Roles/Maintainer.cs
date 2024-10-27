@@ -15,8 +15,8 @@ public class Maintainer : RoleBase
 
     public Maintainer(IRoom room) : base(room)
     {
-        _energyReceivingComponent = new EnergyReceivingComponent(_room);
-        _idleComponent = new IdleComponent(_room);
+        _energyReceivingComponent = new EnergyReceivingComponent(Room);
+        _idleComponent = new IdleComponent(Room);
     }
     
     public override void Run(ICreep creep)
@@ -78,7 +78,7 @@ public class Maintainer : RoleBase
 
     private IStructure? FindBuildingToMaintain(ICreep creep)
     {
-        var buildingToMaintain = _room.Find<IStructure>()
+        var buildingToMaintain = Room.Find<IStructure>()
             .Where(building => (float)building.Hits / building.HitsMax < RepairThreshold && building is not IStructureRoad or IStructureWall)
             .OrderBy(building => creep.LocalPosition.LinearDistanceTo(building.LocalPosition));;
         
@@ -87,7 +87,7 @@ public class Maintainer : RoleBase
             return buildingToMaintain.First();
         }
         
-        buildingToMaintain = _room.Find<IStructureRoad>()
+        buildingToMaintain = Room.Find<IStructureRoad>()
              .Where(building => (float)building.Hits / building.HitsMax < RepairThreshold)
              .OrderBy(building => creep.LocalPosition.LinearDistanceTo(building.LocalPosition));
 
@@ -96,7 +96,7 @@ public class Maintainer : RoleBase
              return buildingToMaintain.First();
          }
          
-         buildingToMaintain = _room.Find<IStructureWall>()
+         buildingToMaintain = Room.Find<IStructureWall>()
              .Where(building => (float)building.Hits / building.HitsMax < RepairThreshold)
              .OrderBy(building => creep.LocalPosition.LinearDistanceTo(building.LocalPosition));
          

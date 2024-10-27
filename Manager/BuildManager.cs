@@ -8,7 +8,7 @@ namespace Screeps.Manager;
 
 public class BuildManager
 {
-    private const int BuildIntervalInTicks = 15;
+    private const int BuildIntervalInTicks = 600;
     private const int RouteCheckIntervalInTicks = 1800;
     
     private readonly IRoom _room;
@@ -99,7 +99,7 @@ public class BuildManager
             // Skip if road or construction site exists
             if (lookResult.Any(obj => obj is IStructureRoad or IConstructionSite))
             {
-                Console.WriteLine($"Found {lookResult.Count} objects at {roadPosition.ToString()}");
+                //Console.WriteLine($"Found {lookResult.Count} objects at {roadPosition.ToString()}");
                 continue;
             }
         

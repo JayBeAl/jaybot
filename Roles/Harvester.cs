@@ -59,13 +59,13 @@ public class Harvester(IRoom room) : RoleBase(room)
 
     private ISource? FindNearestSource(Position position)
     {
-        return _room.Find<ISource>().MinBy(x => x.LocalPosition.LinearDistanceTo(position));
+        return Room.Find<ISource>().MinBy(x => x.LocalPosition.LinearDistanceTo(position));
     }
     
     private IStructure? FindNearestEnergyStorageWithSpace(Position position)
     {
         // Priority on Spawns
-        var fillableSpawn = _room.Find<IStructureSpawn>()
+        var fillableSpawn = Room.Find<IStructureSpawn>()
             .Where(x => x.Exists)
             .Where(x => x.Store[ResourceType.Energy] < x.Store.GetCapacity(ResourceType.Energy))
             .MinBy(x => x.LocalPosition.LinearDistanceTo(position));
@@ -75,7 +75,7 @@ public class Harvester(IRoom room) : RoleBase(room)
             return fillableSpawn;
         }
         
-        return _room.Find<IStructure>()
+        return Room.Find<IStructure>()
             .Where(x => x.Exists && x is IStructureExtension)
             .Where(x => ((IStructureExtension)x).Store[ResourceType.Energy] < ((IStructureExtension)x).Store.GetCapacity(ResourceType.Energy))
             .MinBy(x => x.LocalPosition.LinearDistanceTo(position));

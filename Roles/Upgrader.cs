@@ -13,8 +13,8 @@ public class Upgrader : RoleBase
 
     public Upgrader(IRoom room) : base(room)
     {
-        _energyReceivingComponent = new EnergyReceivingComponent(_room);
-        _idleComponent = new IdleComponent(_room);
+        _energyReceivingComponent = new EnergyReceivingComponent(Room);
+        _idleComponent = new IdleComponent(Room);
     }
     
     public override void Run(ICreep creep)
