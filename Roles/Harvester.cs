@@ -1,11 +1,25 @@
+using System.Collections.Generic;
 using System.Linq;
+using Screeps.Extensions;
+using Screeps.Manager.Source;
 using ScreepsDotNet.API;
 using ScreepsDotNet.API.World;
 
 namespace Screeps.Roles;
 
-public class Harvester(IRoom room) : RoleBase(room)
+public class Harvester : RoleBase
 {
+    private readonly Dictionary<string, ISource> _sources = [];
+
+    public Harvester(IRoom room) : base(room)
+    {
+        var sources = room.Find<ISource>().ToList();
+        foreach (var source in sources)
+        {
+            _sources.Add(source.Id.ToString(), source);
+        }
+    }
+    
     public override void Run(ICreep creep)
     {
         if (!creep.Memory.TryGetBool("isMining", out var isMining))
@@ -16,27 +30,28 @@ public class Harvester(IRoom room) : RoleBase(room)
         
         if (isMining && creep.Store.GetFreeCapacity() == 0)
         {
+            UnassignSource(creep);
             isMining = false;
             creep.Say("Delivering \ud83d\udea7");
         }
         
         if (!isMining && creep.Store.GetUsedCapacity() == 0)
         {
-            isMining = true;
-            creep.Say("Mining \u26a1");
+            if (AssignSource(creep))
+            {
+                isMining = true;
+                creep.Say("Mining \u26a1");
+            }
         }
         
-        if (creep.Store.GetFreeCapacity() > 0)
+        if (isMining)
         {
-            var source = FindNearestSource(creep.LocalPosition);
-            if (source == null)
+            if (creep.Memory.TryGetString("EnergySource", out var energySource) && energySource != string.Empty)
             {
-                return;
-            }
-            
-            if (creep.Harvest(source) == CreepHarvestResult.NotInRange)
-            {
-                creep.MoveTo(source.LocalPosition, new MoveToOptions());
+                if (creep.Harvest(_sources[energySource]) == CreepHarvestResult.NotInRange)
+                {
+                    creep.MoveTo(_sources[energySource].LocalPosition);
+                }
             }
         }
         else
@@ -57,27 +72,78 @@ public class Harvester(IRoom room) : RoleBase(room)
         creep.Memory.SetValue("isMining", isMining);
     }
 
-    private ISource? FindNearestSource(Position position)
+    private bool AssignSource(ICreep creep)
     {
-        return Room.Find<ISource>().MinBy(x => x.LocalPosition.LinearDistanceTo(position));
+        var sourceId = FindNearestFreeSource(creep.LocalPosition);
+        if (sourceId != null &&
+            _sources[sourceId].Memory(Room).TryGetInt(SourceProperty.ReservedSlots.ToString(), out var reservedSlots) &&
+            _sources[sourceId].Memory(Room).TryGetInt(SourceProperty.MiningSlots.ToString(), out var miningSlots) &&
+            reservedSlots < miningSlots)
+        {
+            _sources[sourceId].Memory(Room).SetValue(SourceProperty.ReservedSlots.ToString(), reservedSlots + 1);
+            creep.Memory.SetValue("EnergySource", sourceId);
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool UnassignSource(ICreep creep)
+    {
+        if (creep.Memory.TryGetString("EnergySource", out var energySource) &&
+            energySource != string.Empty &&
+            _sources[energySource].Memory(Room).TryGetInt(SourceProperty.ReservedSlots.ToString(), out var reservedSlots))
+        {
+            _sources[energySource].Memory(Room).SetValue(SourceProperty.ReservedSlots.ToString(), reservedSlots - 1);
+            creep.Memory.SetValue("EnergySource", string.Empty);
+            return true;
+        }
+
+        return false;
+    }
+
+    private ObjectId? FindNearestFreeSource(Position position)
+    {
+        var freeSources = new List<ISource>();
+        foreach (var source in _sources.Values)
+        {
+            if (source.Memory(Room).TryGetInt(SourceProperty.ReservedSlots.ToString(), out var reservedSlots) &&
+                source.Memory(Room).TryGetInt(SourceProperty.MiningSlots.ToString(), out var miningSlots) &&
+                reservedSlots < miningSlots)
+            {
+                freeSources.Add(source);
+            }
+        }
+        
+        return freeSources.Count != 0 ? freeSources.MinBy(x => x.LocalPosition.LinearDistanceTo(position))?.Id : null;
     }
     
     private IStructure? FindNearestEnergyStorageWithSpace(Position position)
     {
-        // Priority on Spawns
-        var fillableSpawn = Room.Find<IStructureSpawn>()
-            .Where(x => x.Exists)
-            .Where(x => x.Store[ResourceType.Energy] < x.Store.GetCapacity(ResourceType.Energy))
-            .MinBy(x => x.LocalPosition.LinearDistanceTo(position));
-
-        if (fillableSpawn != null)
+        var availableStorages = Room.Find<IStructure>().Where(structure => structure is IWithStore storage && storage.Store[ResourceType.Energy] < storage.Store.GetCapacity(ResourceType.Energy)).ToList();
+        if (availableStorages.Count == 0)
         {
-            return fillableSpawn;
+            return null;
         }
         
-        return Room.Find<IStructure>()
-            .Where(x => x.Exists && x is IStructureExtension)
-            .Where(x => ((IStructureExtension)x).Store[ResourceType.Energy] < ((IStructureExtension)x).Store.GetCapacity(ResourceType.Energy))
-            .MinBy(x => x.LocalPosition.LinearDistanceTo(position));
+        var availableSpecificStorages = availableStorages.Where(storage => storage is IStructureSpawn).ToList();
+        if (availableSpecificStorages.Count != 0)
+        {
+            return availableSpecificStorages.MinBy(x => x.LocalPosition.LinearDistanceTo(position));;
+        }
+        
+        availableSpecificStorages = availableStorages.Where(storage => storage is IStructureContainer).ToList();
+        if (availableSpecificStorages.Count != 0)
+        {
+            return availableSpecificStorages.MinBy(x => x.LocalPosition.LinearDistanceTo(position));;
+        }
+        
+        availableSpecificStorages = availableStorages.Where(storage => storage is IStructureExtension).ToList();
+        if (availableSpecificStorages.Count != 0)
+        {
+            return availableSpecificStorages.MinBy(x => x.LocalPosition.LinearDistanceTo(position));;
+        }
+
+        return null;
     }
 }

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Screeps.Extensions;
+using Screeps.Manager.Source;
 using ScreepsDotNet.API;
 using ScreepsDotNet.API.World;
 
@@ -31,6 +33,7 @@ public class BuildManager
         if (_game.Time % BuildIntervalInTicks == 0)
         {
             Console.WriteLine($"Checking for roads in {_room.Name}");
+            ManageSourceContainer();
             ManageRoads();
         }
         
@@ -41,6 +44,23 @@ public class BuildManager
         }
     }
 
+    private void ManageSourceContainer()
+    {
+        foreach (var source in _sources)
+        {
+            if (source.Memory(_room).TryGetString(SourceProperty.ContainerPosition.ToString(), out var positionString))
+            {
+                var positionStringArray = positionString.Replace("[", "").Replace("]", "").Split(',');
+                var position = new Position(int.Parse(positionStringArray[0]), int.Parse(positionStringArray[1]));
+                var sourceContainer = _room.LookForAt<IStructureContainer>(position);
+                if (!sourceContainer.Any())
+                {
+                    _room.CreateConstructionSite<IStructureContainer>(position);
+                }
+            }
+        }
+    }
+
     private void UpdateSpawns()
     {
         var existingSpawns = _room.Find<IStructureSpawn>().Where(spawn => spawn.Exists).ToList();
@@ -48,32 +68,6 @@ public class BuildManager
         {
             _spawns = existingSpawns;
         }
-    }
-
-    private void GenerateRoomRoutes()
-    {
-        _roads.Clear();
-        
-        foreach (var spawn in _spawns)
-        {
-            foreach (var source in _sources)
-            {
-                var sourcePath = _room.FindPath(spawn.RoomPosition, source.RoomPosition, new FindPathOptions(true));
-                Console.WriteLine($"Found path from {spawn.RoomPosition} to {source.RoomPosition} -> {sourcePath.Count()}");
-                foreach (var pathStep in sourcePath)
-                {
-                    _roads.Add(pathStep.Position);
-                }
-            }
-            
-            var controllerPath = _room.FindPath(spawn.RoomPosition, _room.Controller!.RoomPosition, new FindPathOptions(true));
-            Console.WriteLine($"Found path from {spawn.RoomPosition} to {_room.Controller!.RoomPosition} -> {controllerPath.Count()}");
-            foreach (var pathStep in controllerPath)
-            {
-                _roads.Add(pathStep.Position);
-            }
-        }
-        Console.WriteLine($"Found {_roads.Count} roads in {_room.Name}");
     }
 
     private void ManageRoads()
@@ -116,5 +110,31 @@ public class BuildManager
                 Console.WriteLine($"Found {roomObject.GetType()}");
             }
         }
+    }
+
+    private void GenerateRoomRoutes()
+    {
+        _roads.Clear();
+        
+        foreach (var spawn in _spawns)
+        {
+            foreach (var source in _sources)
+            {
+                var sourcePath = _room.FindPath(spawn.RoomPosition, source.RoomPosition, new FindPathOptions(true));
+                Console.WriteLine($"Found path from {spawn.RoomPosition} to {source.RoomPosition} -> {sourcePath.Count()}");
+                foreach (var pathStep in sourcePath)
+                {
+                    _roads.Add(pathStep.Position);
+                }
+            }
+            
+            var controllerPath = _room.FindPath(spawn.RoomPosition, _room.Controller!.RoomPosition, new FindPathOptions(true));
+            Console.WriteLine($"Found path from {spawn.RoomPosition} to {_room.Controller!.RoomPosition} -> {controllerPath.Count()}");
+            foreach (var pathStep in controllerPath)
+            {
+                _roads.Add(pathStep.Position);
+            }
+        }
+        Console.WriteLine($"Found {_roads.Count} roads in {_room.Name}");
     }
 }

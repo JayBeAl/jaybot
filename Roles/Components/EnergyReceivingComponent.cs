@@ -59,8 +59,10 @@ public class EnergyReceivingComponent
     private IStructure? FindNearestFilledEnergyStorage(Position position)
     {
         return _room.Find<IStructure>()
-            .Where(x => x.Exists && (x is IStructureSpawn spawn && spawn.Store[ResourceType.Energy] > 0 
-                                     || x is IStructureExtension extension && extension.Store[ResourceType.Energy] > 0))
+            .Where(x => x.Exists && (x is IStructureContainer container && container.Store[ResourceType.Energy] > 0
+                                     || x is IStructureExtension extension && extension.Store[ResourceType.Energy] > 0)
+                        || x is IStructureSpawn spawn && spawn.Store[ResourceType.Energy] > 0)
             .MinBy(x => x.LocalPosition.LinearDistanceTo(position));
+        ;
     }
 }

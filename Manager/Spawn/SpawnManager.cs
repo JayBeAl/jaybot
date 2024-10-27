@@ -40,7 +40,7 @@ public class SpawnManager
         _creepCounter.Add(Role.Builder, 0);
         _creepCounter.Add(Role.Maintainer, 0);
         
-        _creepTargets.Add(Role.Harvester, 5);
+        _creepTargets.Add(Role.Harvester, 7);
         _creepTargets.Add(Role.Upgrader, 3);
         _creepTargets.Add(Role.Builder, 2);
         _creepTargets.Add(Role.Maintainer, 1);
