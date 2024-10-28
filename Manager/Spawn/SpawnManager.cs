@@ -123,6 +123,12 @@ public class SpawnManager
             return;
         }
 
+        // ToDo: Find better place for this
+        if (roleInstance is Harvester harvester)
+        {
+            harvester.OnDead(creep);
+        }
+
         if (_reversedRoleMap.TryGetValue(roleInstance, out var value) && _allCreeps.Contains(creep))
         {
             _allCreeps.Remove(creep);
