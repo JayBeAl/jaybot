@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Screeps.Extensions;
 using Screeps.Manager.Source;
 using ScreepsDotNet.API;
 using ScreepsDotNet.API.World;
@@ -15,15 +14,16 @@ public class BuildManager
     
     private readonly IRoom _room;
     private readonly IGame _game;
+    private readonly SourceManager _sourceManager;
+    
     private List<IStructureSpawn> _spawns = [];
-    private readonly List<ISource> _sources;
     private readonly List<Position> _roads = [];
     
-    public BuildManager(IGame game, IRoom room)
+    public BuildManager(IGame game, IRoom room, SourceManager sourceManager)
     {
         _game = game;
         _room = room;
-        _sources = _room.Find<ISource>().ToList();
+        _sourceManager = sourceManager;
         UpdateSpawns();
         GenerateRoomRoutes();
     }
@@ -46,17 +46,17 @@ public class BuildManager
 
     private void ManageSourceContainer()
     {
-        foreach (var source in _sources)
+        foreach (var wrappedSource in _sourceManager.Sources)
         {
-            if (source.Memory(_room).TryGetString(SourceProperty.ContainerPosition.ToString(), out var positionString))
+            if (wrappedSource.ContainerPosition == new Position(-1, -1))
             {
-                var positionStringArray = positionString.Replace("[", "").Replace("]", "").Split(',');
-                var position = new Position(int.Parse(positionStringArray[0]), int.Parse(positionStringArray[1]));
-                var sourceContainer = _room.LookForAt<IStructureContainer>(position);
-                if (!sourceContainer.Any())
-                {
-                    _room.CreateConstructionSite<IStructureContainer>(position);
-                }
+                continue;
+            }
+            
+            var sourceContainer = _room.LookForAt<IStructureContainer>(wrappedSource.ContainerPosition);
+            if (!sourceContainer.Any())
+            {
+                _room.CreateConstructionSite<IStructureContainer>(wrappedSource.ContainerPosition);
             }
         }
     }
@@ -118,10 +118,10 @@ public class BuildManager
         
         foreach (var spawn in _spawns)
         {
-            foreach (var source in _sources)
+            foreach (var wrappedSource in _sourceManager.Sources)
             {
-                var sourcePath = _room.FindPath(spawn.RoomPosition, source.RoomPosition, new FindPathOptions(true));
-                Console.WriteLine($"Found path from {spawn.RoomPosition} to {source.RoomPosition} -> {sourcePath.Count()}");
+                var sourcePath = _room.FindPath(spawn.RoomPosition, wrappedSource.Source.RoomPosition, new FindPathOptions(true));
+                Console.WriteLine($"Found path from {spawn.RoomPosition} to {wrappedSource.Source.RoomPosition} -> {sourcePath.Count()}");
                 foreach (var pathStep in sourcePath)
                 {
                     _roads.Add(pathStep.Position);

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using Screeps.Manager.Source;
 using Screeps.Roles;
 using ScreepsDotNet.API;
 using ScreepsDotNet.API.World;
@@ -12,6 +13,8 @@ public class SpawnManager
 {
     private readonly IGame _game;
     private readonly IRoom _room;
+    private readonly SourceManager _sourceManager;
+    
     private readonly Random _random = new();
     
     private readonly List<ICreep> _allCreeps = [];
@@ -24,12 +27,13 @@ public class SpawnManager
     
     private readonly BodyType<BodyPartType> _workerBodyType = new([(BodyPartType.Move, 1), (BodyPartType.Carry, 1), (BodyPartType.Work, 1)]);
 
-    public SpawnManager(IGame game, IRoom room)
+    public SpawnManager(IGame game, IRoom room, SourceManager sourceManager)
     {
         _game = game;
         _room = room;
+        _sourceManager = sourceManager;
 
-        _roleMap.Add(Role.Harvester, new Harvester(_room));
+        _roleMap.Add(Role.Harvester, new Harvester(_room, sourceManager));
         _roleMap.Add(Role.Upgrader, new Upgrader(_room));
         _roleMap.Add(Role.Builder, new Builder(_room));
         _roleMap.Add(Role.Maintainer, new Maintainer(_room));
@@ -122,12 +126,8 @@ public class SpawnManager
         {
             return;
         }
-
-        // ToDo: Find better place for this
-        if (roleInstance is Harvester harvester)
-        {
-            harvester.OnDead(creep);
-        }
+        
+        roleInstance.OnDead(creep);
 
         if (_reversedRoleMap.TryGetValue(roleInstance, out var value) && _allCreeps.Contains(creep))
         {

@@ -32,6 +32,11 @@ public class Upgrader : RoleBase
         _idleComponent.Tick(creep, IdleFlagName);
     }
 
+    public override void OnDead(ICreep creep)
+    {
+        // Nothing to find here yet
+    }
+
     private bool ExecuteUpgraderBehavior(ICreep creep)
     {
         if (creep.Room!.Controller!.Level != ControllerMaxLevel)

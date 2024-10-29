@@ -1,8 +1,6 @@
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using Screeps.Extensions;
 using Screeps.Manager.Source;
+using Screeps.Roles.Components;
 using ScreepsDotNet.API;
 using ScreepsDotNet.API.World;
 
@@ -10,19 +8,33 @@ namespace Screeps.Roles;
 
 public class Harvester : RoleBase
 {
-    private readonly Dictionary<string, ISource> _sources = [];
-    private readonly Dictionary<ICreep, string> _creepSources = [];
+    private readonly SourceManager _sourceManager;
+    
+    private readonly IdleComponent _idleComponent;
 
-    public Harvester(IRoom room) : base(room)
+    public Harvester(IRoom room, SourceManager sourceManager) : base(room)
     {
-        var sources = room.Find<ISource>().ToList();
-        foreach (var source in sources)
-        {
-            _sources.Add(source.Id.ToString(), source);
-        }
+        _sourceManager = sourceManager;
+        
+        _idleComponent = new IdleComponent(room);
     }
     
     public override void Run(ICreep creep)
+    {
+        if (ExecuteHarvesterBehavior(creep))
+        {
+            return;
+        }
+        
+        _idleComponent.Tick(creep, "Idle Harvester");
+    }
+
+    public override void OnDead(ICreep creep)
+    {
+        _sourceManager.LeaveEnergySource(creep);
+    }
+
+    private bool ExecuteHarvesterBehavior(ICreep creep)
     {
         if (!creep.Memory.TryGetBool("isMining", out var isMining))
         {
@@ -32,120 +44,53 @@ public class Harvester : RoleBase
         
         if (!isMining && creep.Store.GetUsedCapacity() == 0)
         {
-            if (AssignSource(creep))
-            {
-                isMining = true;
-                creep.Say("Mining \u26a1");
-            }
+            isMining = true;
+            creep.Say("Mining \u26a1");
         }
         
         if (isMining && creep.Store.GetFreeCapacity() == 0)
         {
-            if (UnassignSource(creep))
-            {
-                isMining = false;
-                creep.Say("Delivering \ud83d\udea7");
-            }
+            isMining = false;
+            _sourceManager.LeaveEnergySource(creep);
+            creep.Say("Delivering \ud83d\udea7");
         }
         
         if (isMining)
         {
-            if (creep.Memory.TryGetString("EnergySource", out var energySource) && energySource != string.Empty)
+            var assignedSource = _sourceManager.GetFreeEnergySource(creep);
+            if (assignedSource != null)
             {
-                if (creep.Harvest(_sources[energySource]) == CreepHarvestResult.NotInRange)
+                if (creep.Harvest(assignedSource.Source) == CreepHarvestResult.NotInRange)
                 {
-                    creep.MoveTo(_sources[energySource].LocalPosition);
+                    creep.MoveTo(assignedSource.Source.LocalPosition);
                 }
+
+                creep.Memory.SetValue("isMining", isMining);
+                return true;
             }
+            
+            creep.Say("No source");
+            creep.Memory.SetValue("isMining", isMining);
+            return false;
         }
         else
         {
             var storage = FindNearestEnergyStorageWithSpace(creep.LocalPosition);
-            if (storage == null)
+            if (storage != null)
             {
-                creep.Say("No energy storage available.");
-                return;
+                if (creep.Transfer(storage, ResourceType.Energy) == CreepTransferResult.NotInRange)
+                {
+                    creep.MoveTo(storage.RoomPosition);
+                }
+                
+                creep.Memory.SetValue("isMining", isMining);
+                return true;
             }
-            
-            if (creep.Transfer(storage, ResourceType.Energy) == CreepTransferResult.NotInRange)
-            {
-                creep.MoveTo(storage.RoomPosition);
-            }
-        }
-        
-        creep.Memory.SetValue("isMining", isMining);
-    }
 
-    public void OnDead(ICreep creep)
-    {
-        if(_creepSources.Remove(creep, out var creepEnergySource) &&
-           _sources[creepEnergySource].Memory(Room).TryGetInt(SourceProperty.ReservedSlots.ToString(), out var reservedSlots) &&
-           reservedSlots > 0)
-        {
-            _sources[creepEnergySource].Memory(Room).SetValue(SourceProperty.ReservedSlots.ToString(), reservedSlots - 1);
-        }
-    }
-
-    private bool AssignSource(ICreep creep)
-    {
-        if (!creep.Memory.TryGetString("EnergySource", out var energySource))
-        {
-            creep.Memory.SetValue("EnergySource", string.Empty);
-        }
-
-        if (energySource != string.Empty)
-        {
+            creep.Say("No storage");
+            creep.Memory.SetValue("isMining", isMining);
             return false;
         }
-        
-        Console.WriteLine("Saved energy source: " + energySource);
-        
-        var sourceId = FindNearestFreeSource(creep.LocalPosition);
-        Console.WriteLine("Found: " + sourceId);
-        if (sourceId != null &&
-            _sources[sourceId].Memory(Room).TryGetInt(SourceProperty.ReservedSlots.ToString(), out var reservedSlots) &&
-            _sources[sourceId].Memory(Room).TryGetInt(SourceProperty.MiningSlots.ToString(), out var miningSlots) &&
-            reservedSlots < miningSlots)
-        {
-            _sources[sourceId].Memory(Room).SetValue(SourceProperty.ReservedSlots.ToString(), reservedSlots + 1);
-            _creepSources[creep] = sourceId;
-            creep.Memory.SetValue("EnergySource", sourceId.ToString());
-            return true;
-        }
-
-        return false;
-    }
-
-    private bool UnassignSource(ICreep creep)
-    {
-        if (creep.Memory.TryGetString("EnergySource", out var energySource) &&
-            energySource != string.Empty &&
-            _sources[energySource].Memory(Room).TryGetInt(SourceProperty.ReservedSlots.ToString(), out var reservedSlots) &&
-            reservedSlots > 0)
-        {
-            _sources[energySource].Memory(Room).SetValue(SourceProperty.ReservedSlots.ToString(), reservedSlots - 1);
-            _creepSources.Remove(creep);
-            creep.Memory.SetValue("EnergySource", string.Empty);
-            return true;
-        }
-
-        return false;
-    }
-
-    private ObjectId? FindNearestFreeSource(Position position)
-    {
-        var freeSources = new List<ISource>();
-        foreach (var source in _sources.Values)
-        {
-            if (source.Memory(Room).TryGetInt(SourceProperty.ReservedSlots.ToString(), out var reservedSlots) &&
-                source.Memory(Room).TryGetInt(SourceProperty.MiningSlots.ToString(), out var miningSlots) &&
-                reservedSlots < miningSlots)
-            {
-                freeSources.Add(source);
-            }
-        }
-        
-        return freeSources.Count != 0 ? freeSources.MinBy(x => x.LocalPosition.LinearDistanceTo(position))?.Id : null;
     }
     
     private IStructure? FindNearestEnergyStorageWithSpace(Position position)

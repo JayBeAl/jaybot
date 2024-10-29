@@ -34,6 +34,11 @@ public class Maintainer : RoleBase
         _idleComponent.Tick(creep, IdleFlagName);
     }
 
+    public override void OnDead(ICreep creep)
+    {
+        // Nothing to find here yet
+    }
+
     private bool ExecuteMaintainerBehavior(ICreep creep)
     {
         if (!creep.Memory.TryGetBool("isMaintaining", out var isMaintaining))

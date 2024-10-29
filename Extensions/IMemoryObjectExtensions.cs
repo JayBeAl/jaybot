@@ -4,8 +4,8 @@ namespace Screeps.Extensions;
 
 public static class MemoryObjectExtensions
 {
-    internal static IMemoryObject Memory(this ISource source, IRoom room)
+    internal static IMemoryObject Memory(this ISource source)
     {
-        return room.Memory.GetOrCreateObject("sources").GetOrCreateObject(source.Id);
+        return source.Room.Memory.GetOrCreateObject("sources").GetOrCreateObject(source.Id);
     }
 }

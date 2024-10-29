@@ -12,33 +12,76 @@ public class SourceManager
 {
     private readonly IRoom _room;
     
+    private readonly Dictionary<ICreep, WrappedSource> _sourceAssignments = new();
+
+    public List<WrappedSource> Sources { get; set; } = [];
+    
     public SourceManager(IRoom room)
     {
         _room = room;
         InstantiateSources();
     }
 
+    public WrappedSource? GetFreeEnergySource(ICreep creep)
+    {
+        if (_sourceAssignments.TryGetValue(creep, out var value))
+        {
+            return value;
+        }
+        
+        var idealWrappedSource = Sources.Where(source => source.ReservedSlots < source.MiningSlots)
+            .MinBy(source => source.Source.LocalPosition.CartesianDistanceTo(creep.LocalPosition));
+        
+        if (idealWrappedSource != null)
+        {
+            idealWrappedSource.ReservedSlots++;
+            _sourceAssignments.Add(creep, idealWrappedSource);
+            return idealWrappedSource;
+        }
+
+        return null;
+    }
+
+    public void LeaveEnergySource(ICreep creep)
+    {
+        if (_sourceAssignments.TryGetValue(creep, out var value))
+        {
+            value.ReservedSlots--;
+            _sourceAssignments.Remove(creep);
+            return;
+        }
+    }
+
     private void InstantiateSources()
     {
         foreach (var source in _room.Find<ISource>())
         {
-            if (!source.Memory(_room).TryGetInt(SourceProperty.MiningSlots.ToString(), out var miningSlots))
+            if (!source.Memory().TryGetInt(SourceProperty.MiningSlots.ToString(), out var miningSlots))
             {
                 miningSlots = GetFreeSlots(source.LocalPosition, 1).Count;
-                source.Memory(_room).SetValue(SourceProperty.MiningSlots.ToString(), miningSlots);
+                source.Memory().SetValue(SourceProperty.MiningSlots.ToString(), miningSlots);
             }
             
-            if (!source.Memory(_room).TryGetInt(SourceProperty.ReservedSlots.ToString(), out var reservedSlots))
-            {
-                reservedSlots = 0;
-                source.Memory(_room).SetValue(SourceProperty.ReservedSlots.ToString(), reservedSlots);
-            }
-            
-            if (!source.Memory(_room).TryGetString(SourceProperty.ContainerPosition.ToString(), out var containerPosition))
+            if (!source.Memory().TryGetString(SourceProperty.ContainerPosition.ToString(), out var containerPosition))
             {
                 containerPosition = DetermineContainerPosition(source).ToString();
-                source.Memory(_room).SetValue(SourceProperty.ContainerPosition.ToString(), containerPosition);
+                source.Memory().SetValue(SourceProperty.ContainerPosition.ToString(), containerPosition);
             }
+            
+            var positionStringArray = containerPosition.Replace("[", "").Replace("]", "").Split(',');
+            var position = new Position(int.Parse(positionStringArray[0]), int.Parse(positionStringArray[1]));
+
+            var wrappedSource = new WrappedSource()
+            {
+                Source = source,
+                MiningSlots = miningSlots,
+                ReservedSlots = 0,
+                ContainerPosition = position
+            };
+            
+            Sources.Add(wrappedSource);
+
+            Console.WriteLine("Added Source: " + wrappedSource);
         }
     }
 

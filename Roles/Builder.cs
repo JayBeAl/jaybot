@@ -32,6 +32,11 @@ public class Builder : RoleBase
         _idleComponent.Tick(creep, IdleFlagName);
     }
 
+    public override void OnDead(ICreep creep)
+    {
+        // Nothing to find here yet
+    }
+
     private bool ExecuteBuildingBehavior(ICreep creep)
     {
         if(creep.Room!.Find<IConstructionSite>().Any())
