@@ -4,5 +4,7 @@ public enum SourceProperty
 {
     ContainerPosition,
     MiningSlots,
-    ReservedSlots
+    ReservedSlots,
+    MaxWorkingParts,
+    CurrentWorkingParts
 }

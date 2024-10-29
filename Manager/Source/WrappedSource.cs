@@ -48,6 +48,48 @@ public class WrappedSource
                 Source.Memory().SetValue(SourceProperty.ReservedSlots.ToString(), value);
             }
         }
+    }    
+    
+    public int MaxWorkingParts
+    {
+        get
+        {
+            if (!Source.Memory().TryGetInt(SourceProperty.MaxWorkingParts.ToString(), out var maxWorkingParts))
+            {
+                Source.Memory().SetValue(SourceProperty.MaxWorkingParts.ToString(), 0);
+                return 0;
+            }
+
+            return maxWorkingParts;
+        }
+        init
+        {
+            if (value >= 0)
+            {
+                Source.Memory().SetValue(SourceProperty.MaxWorkingParts.ToString(), value);
+            }
+        }
+    }
+
+    public int CurrentWorkingParts
+    {
+        get
+        {
+            if (!Source.Memory().TryGetInt(SourceProperty.CurrentWorkingParts.ToString(), out var currentWorkingParts))
+            {
+                Source.Memory().SetValue(SourceProperty.CurrentWorkingParts.ToString(), 0);
+                return 0;
+            }
+
+            return currentWorkingParts;
+        }
+        set
+        {
+            if (value >= 0 & value <= MaxWorkingParts)
+            {
+                Source.Memory().SetValue(SourceProperty.CurrentWorkingParts.ToString(), value);
+            }
+        }
     }
     
     public Position ContainerPosition

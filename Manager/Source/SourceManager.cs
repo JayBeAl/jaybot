@@ -10,6 +10,9 @@ namespace Screeps.Manager.Source;
 
 public class SourceManager
 {
+    private const int EnergyMinedPerTickAndWorkPart = 2;
+    private const int RegenerationTicks = 300;
+    
     private readonly IRoom _room;
     
     private readonly Dictionary<ICreep, WrappedSource> _sourceAssignments = new();
@@ -28,13 +31,17 @@ public class SourceManager
         {
             return value;
         }
+
+        var creepWorkSize = creep.Body.Count(bodyPart => bodyPart.Type == BodyPartType.Work);
         
-        var idealWrappedSource = Sources.Where(source => source.ReservedSlots < source.MiningSlots)
+        var idealWrappedSource = Sources.Where(source => source.ReservedSlots < source.MiningSlots &&
+                                                         source.CurrentWorkingParts + creepWorkSize <= source.MaxWorkingParts)
             .MinBy(source => source.Source.LocalPosition.CartesianDistanceTo(creep.LocalPosition));
         
         if (idealWrappedSource != null)
         {
             idealWrappedSource.ReservedSlots++;
+            idealWrappedSource.CurrentWorkingParts += creep.Body.Count(bodyPart => bodyPart.Type == BodyPartType.Work);
             _sourceAssignments.Add(creep, idealWrappedSource);
             return idealWrappedSource;
         }
@@ -47,6 +54,7 @@ public class SourceManager
         if (_sourceAssignments.TryGetValue(creep, out var value))
         {
             value.ReservedSlots--;
+            value.CurrentWorkingParts -= creep.Body.Count(bodyPart => bodyPart.Type == BodyPartType.Work);
             _sourceAssignments.Remove(creep);
             return;
         }
@@ -68,6 +76,12 @@ public class SourceManager
                 source.Memory().SetValue(SourceProperty.ContainerPosition.ToString(), containerPosition);
             }
             
+            if (!source.Memory().TryGetInt(SourceProperty.MaxWorkingParts.ToString(), out var maxWorkingParts))
+            {
+                maxWorkingParts = DetermineMaxWorkingParts(source);
+                source.Memory().SetValue(SourceProperty.MaxWorkingParts.ToString(), maxWorkingParts);
+            }
+            
             var positionStringArray = containerPosition.Replace("[", "").Replace("]", "").Split(',');
             var position = new Position(int.Parse(positionStringArray[0]), int.Parse(positionStringArray[1]));
 
@@ -76,7 +90,9 @@ public class SourceManager
                 Source = source,
                 MiningSlots = miningSlots,
                 ReservedSlots = 0,
-                ContainerPosition = position
+                ContainerPosition = position,
+                MaxWorkingParts = maxWorkingParts,
+                CurrentWorkingParts = 0
             };
             
             Sources.Add(wrappedSource);
@@ -134,6 +150,11 @@ public class SourceManager
         }
         
         return borderFreeSlots.MinBy(slot => slot.CartesianDistanceTo(source.LocalPosition));
+    }
+
+    private int DetermineMaxWorkingParts(ISource source)
+    {
+        return (source.EnergyCapacity / RegenerationTicks) / EnergyMinedPerTickAndWorkPart;
     }
 
     private bool IsTerrainBuildable(Position position)
