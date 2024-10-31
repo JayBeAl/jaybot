@@ -1,4 +1,4 @@
-namespace Screeps.Manager;
+namespace Screeps.Manager.Spawn;
 
 public enum Role
 {
@@ -6,4 +6,5 @@ public enum Role
     Upgrader,
     Builder,
     Maintainer,
+    Hauler
 }

@@ -34,14 +34,15 @@ public class SourceManager
 
         var creepWorkSize = creep.Body.Count(bodyPart => bodyPart.Type == BodyPartType.Work);
         
-        var idealWrappedSource = Sources.Where(source => source.ReservedSlots < source.MiningSlots &&
-                                                         source.CurrentWorkingParts + creepWorkSize <= source.MaxWorkingParts)
+        var idealWrappedSource = Sources.Where(source => source.ReservedSlots < source.MiningSlots
+                                                         // && source.CurrentWorkingParts + creepWorkSize <= source.MaxWorkingParts
+                                                         )
             .MinBy(source => source.Source.LocalPosition.CartesianDistanceTo(creep.LocalPosition));
         
         if (idealWrappedSource != null)
         {
             idealWrappedSource.ReservedSlots++;
-            idealWrappedSource.CurrentWorkingParts += creep.Body.Count(bodyPart => bodyPart.Type == BodyPartType.Work);
+            // idealWrappedSource.CurrentWorkingParts += creep.Body.Count(bodyPart => bodyPart.Type == BodyPartType.Work);
             _sourceAssignments.Add(creep, idealWrappedSource);
             return idealWrappedSource;
         }
@@ -54,7 +55,7 @@ public class SourceManager
         if (_sourceAssignments.TryGetValue(creep, out var value))
         {
             value.ReservedSlots--;
-            value.CurrentWorkingParts -= creep.Body.Count(bodyPart => bodyPart.Type == BodyPartType.Work);
+            // value.CurrentWorkingParts -= creep.Body.Count(bodyPart => bodyPart.Type == BodyPartType.Work);
             _sourceAssignments.Remove(creep);
             return;
         }
