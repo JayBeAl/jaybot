@@ -9,7 +9,7 @@ namespace Screeps.Manager;
 
 public class BuildManager
 {
-    private const int BuildIntervalInTicks = 600;
+    private const int BuildIntervalInTicks = 60;
     private const int RouteCheckIntervalInTicks = 1800;
     
     private readonly IRoom _room;

@@ -54,6 +54,7 @@ public class Hauler : RoleBase
         if (isWorking)
         {
             var receiver = FindDemandingTowerOrExtension(creep);
+            if (receiver != null)
             {
                 if (creep.Transfer(receiver, ResourceType.Energy) == CreepTransferResult.NotInRange)
                 {

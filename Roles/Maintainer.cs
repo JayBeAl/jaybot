@@ -84,7 +84,7 @@ public class Maintainer : RoleBase
     private IStructure? FindBuildingToMaintain(ICreep creep)
     {
         var buildingToMaintain = Room.Find<IStructure>()
-            .Where(building => (float)building.Hits / building.HitsMax < RepairThreshold && building is not IStructureRoad or IStructureWall)
+            .Where(building => (float)building.Hits / building.HitsMax < RepairThreshold && building is not IStructureRoad and not IStructureWall)
             .OrderBy(building => creep.LocalPosition.LinearDistanceTo(building.LocalPosition));;
         
         if (buildingToMaintain.Any())
@@ -96,20 +96,11 @@ public class Maintainer : RoleBase
              .Where(building => (float)building.Hits / building.HitsMax < RepairThreshold)
              .OrderBy(building => creep.LocalPosition.LinearDistanceTo(building.LocalPosition));
 
-         if (buildingToMaintain.Any())
-         {
-             return buildingToMaintain.First();
-         }
-         
-         buildingToMaintain = Room.Find<IStructureWall>()
-             .Where(building => (float)building.Hits / building.HitsMax < RepairThreshold)
-             .OrderBy(building => creep.LocalPosition.LinearDistanceTo(building.LocalPosition));
-         
-         if (buildingToMaintain.Any())
-         {
-             return buildingToMaintain.First();
-         }
+        if (buildingToMaintain.Any())
+        {
+            return buildingToMaintain.First();
+        }
 
-         return null;
+        return null;
     }
 }

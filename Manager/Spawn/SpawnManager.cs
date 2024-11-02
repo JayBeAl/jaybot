@@ -34,23 +34,23 @@ public class SpawnManager
         _sourceManager = sourceManager;
 
         _roleMap.Add(Role.Harvester, new Harvester(_room, sourceManager));
+        _roleMap.Add(Role.Hauler, new Hauler(_room));
         _roleMap.Add(Role.Upgrader, new Upgrader(_room));
         _roleMap.Add(Role.Builder, new Builder(_room));
         _roleMap.Add(Role.Maintainer, new Maintainer(_room));
-        _roleMap.Add(Role.Hauler, new Hauler(_room));
         _reversedRoleMap = _roleMap.ToDictionary(x => x.Value, x => x.Key);
         
         _creepCounter.Add(Role.Harvester, 0);
+        _creepCounter.Add(Role.Hauler, 0);
         _creepCounter.Add(Role.Upgrader, 0);
         _creepCounter.Add(Role.Builder, 0);
         _creepCounter.Add(Role.Maintainer, 0);
-        _creepCounter.Add(Role.Hauler, 0);
         
         _creepTargets.Add(Role.Harvester, 7);
+        _creepTargets.Add(Role.Hauler, 2);
         _creepTargets.Add(Role.Upgrader, 3);
         _creepTargets.Add(Role.Builder, 2);
         _creepTargets.Add(Role.Maintainer, 1);
-        _creepTargets.Add(Role.Hauler, 2);
         
         // Get all spawns in this room since Room.finds are expensive
         _roomSpawns = _room.Find<IStructureSpawn>().ToList();
